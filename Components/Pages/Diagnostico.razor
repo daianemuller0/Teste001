@@ -6,7 +6,7 @@
     <div>
         <h1>Diagnóstico de PDF</h1>
         <p class="subtitle">
-            Escolha uma proposta em PDF para ver o texto que o programa lê e o que ele extrai do item informado.
+            Informe o caminho de uma proposta em PDF para ver o texto que o programa lê e o que ele extrai do item informado.
             O arquivo é só lido — nada é gravado.
         </p>
     </div>
@@ -14,15 +14,15 @@
 
 <div class="panel">
     <div class="form-grid">
-        <label>PDF da proposta
-            <InputFile class="cell" accept=".pdf" OnChange="Escolheu" />
+        <label>Caminho do PDF da proposta (Shift + botão direito no arquivo → "Copiar como caminho")
+            <input class="cell" @bind="_caminho" placeholder="H:\PV_AFTERMARKET\AF3395\COMERCIAL\Proposta Comercial Valida\proposta.pdf" />
         </label>
         <label>Item da proposta
             <input class="cell num" type="number" min="1" @bind="_item" style="width:110px" />
         </label>
     </div>
     <div class="toolbar" style="margin-top:16px">
-        <button class="btn-primary" @onclick="Analisar" disabled="@(_arquivo is null)">Analisar</button>
+        <button class="btn-primary" @onclick="Analisar" disabled="@string.IsNullOrWhiteSpace(_caminho)">Analisar</button>
     </div>
     @if (_erro is not null) { <div class="alert-error">@_erro</div> }
 </div>
@@ -53,28 +53,21 @@
 }
 
 @code {
-    private IBrowserFile? _arquivo;
+    private string _caminho = "";
     private int _item = 1;
     private string? _texto, _erro;
     private DadosProposta? _dados;
     private bool _itemAchado;
 
-    private void Escolheu(InputFileChangeEventArgs e)
+    private void Analisar()
     {
-        _arquivo = e.File; _texto = null; _dados = null; _erro = null;
-    }
-
-    private async Task Analisar()
-    {
-        if (_arquivo is null) return;
-        _erro = null;
+        _erro = null; _texto = null; _dados = null;
         try
         {
-            var ms = new MemoryStream();
-            await using (var s = _arquivo.OpenReadStream(50L * 1024 * 1024))
-                await s.CopyToAsync(ms);
-            ms.Position = 0;
-            _texto = LeitorPdf.LerTexto(ms);
+            var caminho = _caminho.Trim().Trim('"');
+            if (!File.Exists(caminho))
+                throw new FileNotFoundException("Arquivo não encontrado: " + caminho);
+            _texto = LeitorPdf.LerTexto(caminho);   // só leitura
             (_dados, _itemAchado) = ExtratorProposta.Extrair(_texto, _item, Processador.Opcoes.Rotulos);
         }
         catch (Exception ex)
