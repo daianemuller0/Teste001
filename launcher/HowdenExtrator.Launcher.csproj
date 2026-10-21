@@ -1,0 +1,18 @@
+<!-- O lançador que mora em \\BZVCPFIL003\proj_ramires$\EP\EP.exe.
+     Pequeno de propósito: só compara a versão da rede com a instalada na
+     máquina, copia a nova (com barra de %) e abre o app local. -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>HowdenExtrator.Launcher</RootNamespace>
+    <AssemblyName>EP</AssemblyName>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+</Project>

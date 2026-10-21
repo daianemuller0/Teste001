@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="app.css?v=@Versao" />
+    <title>Howden · Extrator de Propostas</title>
+    <HeadOutlet />
+</head>
+
+<body>
+    <Routes />
+    <script src="_framework/blazor.web.js"></script>
+    <script src="app.js?v=@Versao"></script>
+</body>
+
+</html>
+
+@code {
+    // Carimbo de versão: muda a cada build, então o navegador nunca fica com
+    // CSS/JS antigo em cache depois de uma atualização do sistema.
+    private static readonly string Versao =
+        System.IO.File.GetLastWriteTimeUtc(typeof(App).Assembly.Location).Ticks.ToString();
+}

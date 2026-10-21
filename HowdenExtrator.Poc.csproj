@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>HowdenExtrator.Poc</RootNamespace>
+    <!-- Os projetos desktop e launcher moram em subpastas deste repositório —
+         não fazem parte deste projeto web. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);desktop/**;launcher/**;out/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Leitura do texto dos PDFs das propostas (100% .NET, só leitura). -->
+    <PackageReference Include="PdfPig" Version="0.1.9" />
+    <!-- Leitura e preenchimento da planilha Excel. -->
+    <PackageReference Include="ClosedXML" Version="0.102.2" />
+  </ItemGroup>
+
+</Project>

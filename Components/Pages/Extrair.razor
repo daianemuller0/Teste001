@@ -1,0 +1,154 @@
+@page "/extrair"
+@rendermode InteractiveServer
+@inject ProcessadorPlanilha Processador
+@inject IJSRuntime JS
+
+<div class="page-head">
+    <div>
+        <h1>Extrair da planilha</h1>
+        <p class="subtitle">
+            Lê o pedido da coluna <b>K</b> (ex.: AF3242-01), abre o PDF da proposta na pasta do pedido e preenche
+            as colunas <b>L</b> modelo · <b>M</b> serial · <b>N</b> part number · <b>O</b> preço unitário ·
+            <b>P</b> preço total · <b>Q</b> prazo. Os PDFs e a planilha original não são alterados — você baixa uma cópia preenchida.
+        </p>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="form-grid">
+        <label>Pasta dos pedidos
+            <input class="cell" @bind="_pastaBase" disabled="@_rodando" />
+        </label>
+        <label>Primeira linha de dados
+            <input class="cell num" type="number" min="1" @bind="_linhaInicial" disabled="@_rodando" style="width:110px" />
+        </label>
+        <label>Planilha Excel (.xlsx)
+            <InputFile class="cell" accept=".xlsx,.xlsm" OnChange="Escolheu" disabled="@_rodando" />
+        </label>
+    </div>
+
+    <div class="toolbar" style="margin-top:16px">
+        <button class="btn-primary" @onclick="Iniciar" disabled="@(_rodando || _arquivo is null)">
+            @(_rodando ? "Processando…" : "Processar")
+        </button>
+        @if (_saida is not null)
+        {
+            <button class="btn-ghost" @onclick="Baixar">Baixar planilha preenchida</button>
+        }
+        <span class="saved-flag">@_mensagem</span>
+    </div>
+
+    @if (_erro is not null)
+    {
+        <div class="alert-error">@_erro</div>
+    }
+</div>
+
+@if (_total > 0)
+{
+    <div class="summary-bar" style="margin-top:16px">
+        @_resultados.Count de @_total pedidos processados ·
+        @_resultados.Count(r => r.Status == StatusLinha.Ok) OK ·
+        @_resultados.Count(r => r.Status == StatusLinha.Aviso) com aviso ·
+        @_resultados.Count(r => r.Status == StatusLinha.Erro) com erro
+    </div>
+
+    <table class="grid">
+        <thead><tr><th>Linha</th><th>Pedido</th><th>Status</th><th>Detalhe</th></tr></thead>
+        <tbody>
+            @foreach (var r in _resultados)
+            {
+                <tr>
+                    <td>@r.Linha</td>
+                    <td class="nowrap">@r.Pedido</td>
+                    <td><span class="badge @Classe(r.Status)">@r.Status.ToString().ToUpperInvariant()</span></td>
+                    <td>@r.Detalhe</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private const long MaxBytes = 50L * 1024 * 1024;
+
+    private string _pastaBase = "";
+    private int _linhaInicial;
+    private IBrowserFile? _arquivo;
+    private bool _rodando;
+    private string? _erro, _mensagem, _nomeSaida;
+    private byte[]? _saida;
+    private int _total;
+    private readonly List<ResultadoLinha> _resultados = new();
+
+    protected override void OnInitialized()
+    {
+        _pastaBase = Processador.Opcoes.PastaBase;
+        _linhaInicial = Processador.Opcoes.LinhaInicial;
+    }
+
+    private static string Classe(StatusLinha s) => s switch
+    {
+        StatusLinha.Ok => "st-ok",
+        StatusLinha.Aviso => "st-urgente",
+        _ => "st-vencida",
+    };
+
+    private void Escolheu(InputFileChangeEventArgs e)
+    {
+        _arquivo = e.File;
+        _saida = null; _erro = null; _mensagem = null;
+        _resultados.Clear(); _total = 0;
+    }
+
+    private async Task Iniciar()
+    {
+        if (_arquivo is null) return;
+        _rodando = true; _erro = null; _saida = null; _resultados.Clear(); _total = 0;
+        _mensagem = "Lendo a planilha…";
+        try
+        {
+            // Copia o upload para a memória (a planilha original nunca é tocada).
+            var ms = new MemoryStream();
+            await using (var s = _arquivo.OpenReadStream(MaxBytes))
+                await s.CopyToAsync(ms);
+            ms.Position = 0;
+
+            var pasta = _pastaBase.Trim();
+            var linha = _linhaInicial;
+            var ui = new List<ResultadoLinha>();
+
+            _saida = await Task.Run(() => Processador.Processar(ms, pasta, linha, (total, r) =>
+            {
+                lock (ui) ui.Add(r);
+                InvokeAsync(() =>
+                {
+                    _total = total;
+                    lock (ui) { _resultados.Clear(); _resultados.AddRange(ui); }
+                    _mensagem = $"Processando… {ui.Count}/{total}";
+                    StateHasChanged();
+                });
+            }));
+
+            _nomeSaida = Path.GetFileNameWithoutExtension(_arquivo.Name) + "_preenchido.xlsx";
+            _mensagem = "Concluído — baixe a planilha preenchida.";
+        }
+        catch (Exception ex)
+        {
+            _erro = "Não foi possível processar a planilha: " + ex.Message;
+            _mensagem = null;
+        }
+        finally
+        {
+            _rodando = false;
+        }
+    }
+
+    private async Task Baixar()
+    {
+        if (_saida is null) return;
+        await JS.InvokeVoidAsync("appDownload", _nomeSaida,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            Convert.ToBase64String(_saida));
+    }
+}

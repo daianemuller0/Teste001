@@ -1,0 +1,30 @@
+<!-- Janela desktop do EP: WinForms + WebView2 + Kestrel no MESMO processo.
+     O Sdk é o Web (e não o puro) de propósito: é ele que faz o wwwroot do
+     Blazor fluir para a pasta de publish (ver ARQUITETURA do desktop). -->
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>HowdenExtrator.Desktop</RootNamespace>
+    <AssemblyName>HowdenExtrator</AssemblyName>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <!-- permite compilar/publicar o alvo Windows a partir de qualquer SO -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- app local de usuário: sem servidor IIS etc. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+    <ProjectReference Include="..\HowdenExtrator.Poc.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="appsettings.Desktop.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

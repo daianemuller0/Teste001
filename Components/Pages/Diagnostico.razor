@@ -1,0 +1,85 @@
+@page "/diagnostico"
+@rendermode InteractiveServer
+@inject ProcessadorPlanilha Processador
+
+<div class="page-head">
+    <div>
+        <h1>Diagnóstico de PDF</h1>
+        <p class="subtitle">
+            Escolha uma proposta em PDF para ver o texto que o programa lê e o que ele extrai do item informado.
+            O arquivo é só lido — nada é gravado.
+        </p>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="form-grid">
+        <label>PDF da proposta
+            <InputFile class="cell" accept=".pdf" OnChange="Escolheu" />
+        </label>
+        <label>Item da proposta
+            <input class="cell num" type="number" min="1" @bind="_item" style="width:110px" />
+        </label>
+    </div>
+    <div class="toolbar" style="margin-top:16px">
+        <button class="btn-primary" @onclick="Analisar" disabled="@(_arquivo is null)">Analisar</button>
+    </div>
+    @if (_erro is not null) { <div class="alert-error">@_erro</div> }
+</div>
+
+@if (_dados is not null)
+{
+    <table class="grid" style="margin-top:16px">
+        <thead><tr><th>Campo</th><th>Valor encontrado</th></tr></thead>
+        <tbody>
+            <tr><td>Modelo (L)</td><td>@_dados.Modelo</td></tr>
+            <tr><td>Serial number (M)</td><td>@_dados.Serial</td></tr>
+            <tr><td>Part number (N)</td><td>@_dados.PartNumber</td></tr>
+            <tr><td>Preço unitário (O)</td><td>@_dados.PrecoUnitario</td></tr>
+            <tr><td>Preço total (P)</td><td>@_dados.PrecoTotal</td></tr>
+            <tr><td>Prazo (Q)</td><td>@_dados.Prazo</td></tr>
+        </tbody>
+    </table>
+    @if (!_itemAchado)
+    {
+        <div class="alert-warn">Item @_item não identificado no texto — foi usado o texto todo.</div>
+    }
+}
+
+@if (_texto is not null)
+{
+    <h3 style="margin:20px 0 8px">Texto extraído do PDF</h3>
+    <pre class="panel" style="white-space:pre-wrap;font-size:12.5px;overflow:auto">@_texto</pre>
+}
+
+@code {
+    private IBrowserFile? _arquivo;
+    private int _item = 1;
+    private string? _texto, _erro;
+    private DadosProposta? _dados;
+    private bool _itemAchado;
+
+    private void Escolheu(InputFileChangeEventArgs e)
+    {
+        _arquivo = e.File; _texto = null; _dados = null; _erro = null;
+    }
+
+    private async Task Analisar()
+    {
+        if (_arquivo is null) return;
+        _erro = null;
+        try
+        {
+            var ms = new MemoryStream();
+            await using (var s = _arquivo.OpenReadStream(50L * 1024 * 1024))
+                await s.CopyToAsync(ms);
+            ms.Position = 0;
+            _texto = LeitorPdf.LerTexto(ms);
+            (_dados, _itemAchado) = ExtratorProposta.Extrair(_texto, _item, Processador.Opcoes.Rotulos);
+        }
+        catch (Exception ex)
+        {
+            _erro = "Não consegui ler o PDF: " + ex.Message;
+        }
+    }
+}
